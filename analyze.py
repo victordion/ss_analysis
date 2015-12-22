@@ -21,7 +21,7 @@ for line in content:
         second_last_dot_index = tokens[4].rfind('.', 0, last_dot_index)
         colon_index = tokens[4].index(':')
 
-        #" invalid visited_host format
+        # invalid visited_host format
         if last_dot_index == -1 or colon_index == -1:
             continue
 
@@ -46,12 +46,12 @@ for client_ip in stats_by_client.keys():
     for e in sorted_visits:
         print "    %s : %d" % e
 
-
     fig = plt.figure(fig_num)
     fig_num += 1    
 
     bar_width = 0.35
     
+    # specify the length of interest, we only care these top ***show_len*** visited hosts
     show_len = 10
     num_visits = [x[1] for x in sorted_visits][0:show_len]
     hostname_visits = [x[0] for x in sorted_visits][0:show_len]
@@ -64,4 +64,5 @@ for client_ip in stats_by_client.keys():
     plt.xticks(index, hostname_visits, rotation=15)
     fig.show()
 
+# prevent figures from auto closing
 raw_input()
