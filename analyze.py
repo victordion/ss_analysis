@@ -2,6 +2,7 @@
 from collections import defaultdict
 import operator
 import commands
+import matplotlib.pyplot as plt
 
 with open("shadowsocks.log") as f:
     content = f.readlines()
@@ -28,6 +29,8 @@ for line in content:
 
         stats_by_client[client_ip][visited_host] += 1
 
+fig_num = 1
+
 for client_ip in stats_by_client.keys():
     
     whois_info = commands.getstatusoutput('whois ' + client_ip)[1].split('\n')
@@ -42,3 +45,23 @@ for client_ip in stats_by_client.keys():
     sorted_visits = sorted(stats_by_client[client_ip].items(), key=operator.itemgetter(1), reverse=True)
     for e in sorted_visits:
         print "    %s : %d" % e
+
+
+    fig = plt.figure(fig_num)
+    fig_num += 1    
+
+    bar_width = 0.35
+    
+    show_len = 10
+    num_visits = [x[1] for x in sorted_visits][0:show_len]
+    hostname_visits = [x[0] for x in sorted_visits][0:show_len]
+    index = range(0, show_len)
+    rects = plt.bar(index, num_visits, bar_width, color='b')
+
+    plt.xlabel("Target host")
+    plt.ylabel("Times")
+    plt.title("Visits by" + client_ip + "@" +  netname)
+    plt.xticks(index, hostname_visits, rotation=15)
+    fig.show()
+
+raw_input()
