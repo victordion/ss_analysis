@@ -51,8 +51,8 @@ for client_ip in stats_by_client.keys():
 
     bar_width = 0.35
     
+    show_len = min(10, len(sorted_visits))
     # specify the length of interest, we only care these top ***show_len*** visited hosts
-    show_len = 10
     num_visits = [x[1] for x in sorted_visits][0:show_len]
     hostname_visits = [x[0] for x in sorted_visits][0:show_len]
     index = range(0, show_len)
