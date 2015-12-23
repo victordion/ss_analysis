@@ -9,6 +9,8 @@ with open("shadowsocks.log") as f:
 
 stats_by_client = defaultdict(lambda:defaultdict(int))
 
+valid_domain_suffix = ['net', 'com', 'org', 'co', 'edu', 'mil', 'gov', 'info', 'io', 'tv']
+
 for line in content:
     if "connecting" in line:
         tokens = line.split()
@@ -17,17 +19,25 @@ for line in content:
         colon_index = tokens[6].index(':')
         client_ip = tokens[6][0 : colon_index]
 
-        last_dot_index = tokens[4].rfind('.')
-        second_last_dot_index = tokens[4].rfind('.', 0, last_dot_index)
         colon_index = tokens[4].index(':')
 
-        # invalid visited_host format
-        if last_dot_index == -1 or colon_index == -1:
+        comps = tokens[4][:colon_index].split('.')
+
+        if(len(comps) <= 1):
             continue
+        
+        for i in range(len(comps) - 1, -1, -1):
+            if comps[i] in valid_domain_suffix:
+                start = i - 1
+                break
 
-        visited_host = tokens[4][second_last_dot_index + 1 : colon_index]
+        visited_host = ""
+        for i in range(start, len(comps)):
+            visited_host += comps[i]
+            if i != len(comps) - 1:
+                visited_host += '.'
 
-        stats_by_client[client_ip][visited_host] += 1
+       stats_by_client[client_ip][visited_host] += 1
 
 fig_num = 1
 
