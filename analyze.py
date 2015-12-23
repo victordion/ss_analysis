@@ -3,13 +3,15 @@ from collections import defaultdict
 import operator
 import commands
 import matplotlib.pyplot as plt
+from world import *
 
 with open("shadowsocks.log") as f:
     content = f.readlines()
 
 stats_by_client = defaultdict(lambda:defaultdict(int))
 
-valid_domain_suffix = ['net', 'com', 'org', 'co', 'edu', 'mil', 'gov', 'info', 'io', 'tv']
+super_suffix = ['net', 'com', 'org', 'co', 'edu', 'mil', 'gov', 'info']
+country_suffix = ['cn', 'io', 'tv', 'us', 'tw', 'uk', 'jp', 'hk', 'de', 'li']
 
 for line in content:
     if "connecting" in line:
@@ -20,16 +22,24 @@ for line in content:
         client_ip = tokens[6][0 : colon_index]
 
         colon_index = tokens[4].index(':')
+        comps = tokens[4][0:colon_index].split('.')
 
-        comps = tokens[4][:colon_index].split('.')
-
-        if(len(comps) <= 1):
+        if len(comps) <= 1:
             continue
         
+        start = -1
         for i in range(len(comps) - 1, -1, -1):
-            if comps[i] in valid_domain_suffix:
+            if comps[i] in countries.keys():
+                if comps[i - 1] in nameorgs.keys():
+                    start = i - 2
+                    break
+                else:
+                    start = i - 1
+                    break
+            elif comps[i] in nameorgs.keys():
                 start = i - 1
                 break
+            
 
         visited_host = ""
         for i in range(start, len(comps)):
@@ -37,7 +47,7 @@ for line in content:
             if i != len(comps) - 1:
                 visited_host += '.'
 
-       stats_by_client[client_ip][visited_host] += 1
+        stats_by_client[client_ip][visited_host] += 1
 
 fig_num = 1
 
@@ -61,7 +71,7 @@ for client_ip in stats_by_client.keys():
 
     bar_width = 0.35
     
-    show_len = min(10, len(sorted_visits))
+    show_len = min(20, len(sorted_visits))
     # specify the length of interest, we only care these top ***show_len*** visited hosts
     num_visits = [x[1] for x in sorted_visits][0:show_len]
     hostname_visits = [x[0] for x in sorted_visits][0:show_len]
