@@ -4,85 +4,149 @@ import operator
 import commands
 import matplotlib.pyplot as plt
 from world import *
+import argparse
 
-with open("shadowsocks.log") as f:
-    content = f.readlines()
+def getDateTimeFromLine(line):
+    tokens = line.split()
+    return tokens[0] + " " + tokens[1]
 
-stats_by_client = defaultdict(lambda:defaultdict(int))
 
-super_suffix = ['net', 'com', 'org', 'co', 'edu', 'mil', 'gov', 'info']
-country_suffix = ['cn', 'io', 'tv', 'us', 'tw', 'uk', 'jp', 'hk', 'de', 'li']
+def getClientIPFromLogLine(line):
+    # requesting client IP address
+    tokens = line.split()
+    colon_index = tokens[6].index(':')
+    return tokens[6][0 : colon_index]
 
-for line in content:
-    if "connecting" in line:
-        tokens = line.split()
-        
-        # requesting client IP address
-        colon_index = tokens[6].index(':')
-        client_ip = tokens[6][0 : colon_index]
 
-        colon_index = tokens[4].index(':')
-        comps = tokens[4][0:colon_index].split('.')
+def getVisitedHostFromLogLine(line):
+    tokens = line.split()
+    colon_index = tokens[4].index(':')
+    comps = tokens[4][0:colon_index].split('.')
 
-        if len(comps) <= 1:
-            continue
-        
-        start = -1
-        for i in range(len(comps) - 1, -1, -1):
-            if comps[i] in countries.keys():
-                if comps[i - 1] in nameorgs.keys():
-                    start = i - 2
-                    break
-                else:
-                    start = i - 1
-                    break
-            elif comps[i] in nameorgs.keys():
+    if len(comps) <= 1:
+        return None
+    
+    start = -1
+    for i in range(len(comps) - 1, -1, -1):
+        if comps[i] in countries.keys():
+            if comps[i - 1] in nameorgs.keys():
+                start = i - 2
+                break
+            else:
                 start = i - 1
                 break
-            
-
-        visited_host = ""
-        for i in range(start, len(comps)):
-            visited_host += comps[i]
-            if i != len(comps) - 1:
-                visited_host += '.'
-
-        stats_by_client[client_ip][visited_host] += 1
-
-fig_num = 1
-
-for client_ip in stats_by_client.keys():
-    
-    whois_info = commands.getstatusoutput('whois ' + client_ip)[1].split('\n')
-    
-    for line in whois_info:
-        if "netname" in line.lower():
-            netname = line.split()[1]
+        elif comps[i] in nameorgs.keys():
+            start = i - 1
             break
 
-    print "Client IP: %s --> %s" % (client_ip, netname)
+    visited_host = ""
+    for i in range(start, len(comps)):
+        visited_host += comps[i]
+        if i != len(comps) - 1:
+            visited_host += '.'
+
+    return visited_host
+
+
+def ipMatched(ip, parsed_ip):
+    if "*" not in ip:
+        return ip == parsed_ip
+    else:
+        parsed_ip_tokens = parsed_ip.split(".")
+        ip_tokens = ip.split(".")
+	if len(parsed_ip_tokens) != 4:
+            return False
+        for i in range(0, 4):
+	    if ip_tokens[i] != "*" and ip_tokens[i] != parsed_ip_tokens[i]:
+                return False
+        return True
+
+
+def analyzeByClientIP(client_ip):
+    stats = getStatsByClientIP(client_ip)
+    sorted_stats = getSortedStats(stats)
+    #for e in sorted_stats:
+    #    print "    %s : %d" % e
+    plotSortedStats(sorted_stats, client_ip)
+
+
+def getStatsByClientIP(client_ip):
+    stats = defaultdict(int)
     
-    sorted_visits = sorted(stats_by_client[client_ip].items(), key=operator.itemgetter(1), reverse=True)
-    for e in sorted_visits:
-        print "    %s : %d" % e
+    with open("shadowsocks.log") as f:
+        content = f.readlines()
+    
+    for line in content:
+        if "connecting" in line:
+            parsed_client_ip = getClientIPFromLogLine(line)
+            visited_host = getVisitedHostFromLogLine(line) 
+            if visited_host is not None and ipMatched(client_ip, parsed_client_ip):
+                stats[visited_host] += 1
+    return stats
 
-    fig = plt.figure(fig_num)
-    fig_num += 1    
+def getSortedStats(stats):
+    sorted_stats = sorted(stats.items(), key=operator.itemgetter(1), reverse=True)
+    return sorted_stats
 
+def plotSortedStats(sorted_stats, client_ip="*.*.*.*"):
+    fig = plt.figure()
     bar_width = 0.35
-    
-    show_len = min(20, len(sorted_visits))
+
+    show_len = min(30, len(sorted_stats))
     # specify the length of interest, we only care these top ***show_len*** visited hosts
-    num_visits = [x[1] for x in sorted_visits][0:show_len]
-    hostname_visits = [x[0] for x in sorted_visits][0:show_len]
+    num_visits = [x[1] for x in sorted_stats][0:show_len]
     index = range(0, show_len)
     rects = plt.bar(index, num_visits, bar_width, color='b')
 
     plt.xlabel("Target host")
     plt.ylabel("Times")
-    plt.title("Visits by" + client_ip + "@" +  netname)
-    plt.xticks(index, hostname_visits, rotation=15)
+    plt.title("Visiting Stats of " + client_ip)
+    plt.xticks(index, [tp[0] for tp in sorted_stats], rotation=45)
     fig.show()
+    raw_input()
 
-# prevent figures from auto closing
-raw_input()
+def getWhoisInfo(ip):
+    whois_info = commands.getstatusoutput('whois ' + ip)[1].split('\n')
+    for line in whois_info:
+        if "netname" in line.lower():
+            netname = line.split()[1]
+            return netname
+    return ""
+
+def showIPs():
+    stats_occur = defaultdict(int)
+    stats_first_connect_time = defaultdict(str)
+    stats_last_connect_time = defaultdict(str)
+
+    with open("shadowsocks.log") as f:
+        content = f.readlines()
+    
+    for line in content:
+        if "connecting" in line:
+            parsed_client_ip = getClientIPFromLogLine(line)
+            if parsed_client_ip not in stats_occur:
+                stats_first_connect_time[parsed_client_ip] = getDateTimeFromLine(line)
+            else:
+                stats_last_connect_time[parsed_client_ip] = getDateTimeFromLine(line)
+            stats_occur[parsed_client_ip] += 1
+
+    print "%15s (%10s) %6s %25s %25s" % ("Client IP", "NetName", "#", "First Appear Time", "Last Appear Time")
+    for ip, occurance in stats_occur.items():
+        print "%15s (%10s) %6d %25s %25s" % (ip, getWhoisInfo(ip), occurance, stats_first_connect_time[ip], stats_last_connect_time[ip])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Analyze the log file generated by shadowsocks.')
+    parser.add_argument("verb")
+    parser.add_argument("--client_ip", help="specify client ip")
+
+
+    args = parser.parse_args()
+    if args.verb == "show_ips":
+        showIPs()
+    elif args.verb == "get_stats":
+        analyzeByClientIP(args.client_ip)
+    else:
+        print "Valid positional argument!!!"
+
+
