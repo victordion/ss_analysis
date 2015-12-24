@@ -5,6 +5,7 @@ import commands
 import matplotlib.pyplot as plt
 from world import *
 import argparse
+from ip_lookup import *
 
 # returned value will look like "2015-12-21-00:03:11"
 def getDateTimeStringFromLogLine(line):
@@ -282,6 +283,8 @@ def showIPs():
     print "%15s (%15s) %6s %35s %35s" % ("Client IP", "NetName", "#", "First Appear Time", "Last Appear Time")
     for ip, occurance in stats_occur.items():
         print "%15s (%15s) %6d %35s %35s" % (ip, getWhoisInfo(ip), occurance, stats_first_connect_time[ip], stats_last_connect_time[ip])
+        checkip(ip)
+        print
 
 
 def getStatsByTime(client_ip, granularity, start_time_str, end_time_str):
