@@ -300,6 +300,7 @@ nameorgs = {
 
 
 countries = {
+    "uk": "United Kingdom (common practice)",
     "af": "Afghanistan",
     "al": "Albania",
     "dz": "Algeria",
