@@ -206,10 +206,13 @@ def getStatsByClientIP(client_ip):
     
     for line in content:
         if "connecting" in line:
-            parsed_client_ip = getClientIPFromLogLine(line)
-            visited_host = getVisitedHostFromLogLine(line) 
-            if visited_host is not None and ipMatched(client_ip, parsed_client_ip):
-                stats[visited_host] += 1
+            try:
+                parsed_client_ip = getClientIPFromLogLine(line)
+                visited_host = getVisitedHostFromLogLine(line) 
+                if visited_host is not None and ipMatched(client_ip, parsed_client_ip):
+                    stats[visited_host] += 1
+            except:
+                continue
     return stats
 
 def getSortedStats(stats):
@@ -273,12 +276,15 @@ def showIPs():
     
     for line in content:
         if "connecting" in line:
-            parsed_client_ip = getClientIPFromLogLine(line)
-            if parsed_client_ip not in stats_occur:
-                stats_first_connect_time[parsed_client_ip] = getDateTimeStringFromLogLine(line)
-            else:
-                stats_last_connect_time[parsed_client_ip] = getDateTimeStringFromLogLine(line)
-            stats_occur[parsed_client_ip] += 1
+            try:
+                parsed_client_ip = getClientIPFromLogLine(line)
+                if parsed_client_ip not in stats_occur:
+                    stats_first_connect_time[parsed_client_ip] = getDateTimeStringFromLogLine(line)
+                else:
+                    stats_last_connect_time[parsed_client_ip] = getDateTimeStringFromLogLine(line)
+                stats_occur[parsed_client_ip] += 1
+            except:
+                continue
 
     print "%15s (%15s) %6s %35s %35s" % ("Client IP", "NetName", "#", "First Appear Time", "Last Appear Time")
     for ip, occurance in stats_occur.items():
