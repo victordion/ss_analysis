@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import requests
- 
+
+
 def checkip(ip):
     ip = {'ip': ip}
     URL = 'http://ip.taobao.com/service/getIpInfo.php'
@@ -18,7 +19,8 @@ def checkip(ip):
             print '所属运营商：' + json_data[u'data'][u'isp'].encode('utf-8')
         else:
             print '查询失败,请稍后再试！'
-if __name__ == "__main__": 
-    ip={'ip': '118.249.147.5'}
-    checkip(ip)
 
+
+if __name__ == "__main__":
+    ip = {'ip': '118.249.147.5'}
+    checkip(ip)
